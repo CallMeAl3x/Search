@@ -29,7 +29,8 @@ struct SideBar: View {
 
     @State private var groupFrames: [UUID: CGRect] = [:]
 
-    private static let row: CGFloat = 28
+    /// A tab's line: taller with roomier tabs turned on.
+    private var rowHeight: CGFloat { prefs.sideRow }
     private static let gap: CGFloat = 2
     private static let square: CGFloat = 34
     private static let pinGap: CGFloat = 4
@@ -291,7 +292,7 @@ struct SideBar: View {
         let pinBlock = pins == 0 ? 0 : (pinCells(pins).map(\.maxY).max() ?? 0) + 10
         let listed = browser.listedPins.count
         let ungrouped = displayed.filter { $0.pin == nil && (!prefs.usesTabGroups || browser.group(of: $0) == nil) }.count
-        let listBlock = CGFloat(listed) * (SideBar.row + SideBar.gap) + (listed > 0 ? SideBar.gap : 0)
+        let listBlock = CGFloat(listed) * (rowHeight + SideBar.gap) + (listed > 0 ? SideBar.gap : 0)
             + (showsLine(listed: listed, loose: ungrouped) ? KeepLine.height + SideBar.gap : 0)
         let rows = prefs.usesTabGroups
             ? displayed.filter { $0.pin == nil && browser.group(of: $0) == nil }
@@ -300,8 +301,8 @@ struct SideBar: View {
         // A pair is two lines (see SplitTabItem).
         let pairs = rows.filter { browser.split(for: $0) != nil }.count
         let headings = prefs.usesTabGroups ? CGFloat(browser.tabGroups.count) * (GroupHeading.height + SideBar.gap) : 0
-        let loose = CGFloat(rows.count) * (SideBar.row + SideBar.gap) + CGFloat(pairs) * SideBar.row + headings
-        return Metrics.strip + pinBlock + listBlock + loose + SideBar.row + 8
+        let loose = CGFloat(rows.count) * (rowHeight + SideBar.gap) + CGFloat(pairs) * rowHeight + headings
+        return Metrics.strip + pinBlock + listBlock + loose + rowHeight + 8
     }
 
     @ViewBuilder
@@ -317,7 +318,7 @@ struct SideBar: View {
         let pair = prefs.splitView ? splits.first(where: { $0.left == tab.id }) : nil
         if let pair, let right = tabs.first(where: { $0.id == pair.right }) {
             SplitTabItem(browser: browser, prefs: prefs, left: tab, right: right,
-                         width: nil, height: SideBar.row,
+                         width: nil, height: rowHeight,
                          live: activeID.map { pair.contains($0) } ?? false,
                          focusedID: activeID,
                          interactive: interactive, pill: pill)
@@ -426,7 +427,7 @@ struct SideBar: View {
                         live: tab.id == browser.activeID, pill: pill,
                         close: { browser.close(tab) })
                     .modifier(Carried(index: index, count: pins.count,
-                                      step: SideBar.row + SideBar.gap, vertical: true,
+                                      step: rowHeight + SideBar.gap, vertical: true,
                                       space: "listed") {
                         browser.moveDisplayedTab(tab, to: $0 + squares)
                     })
@@ -455,7 +456,7 @@ struct SideBar: View {
                 KeepLine(clears: !loose.isEmpty) { browser.clearTabs() }
             }
             ForEach(Array(loose.enumerated()), id: \.element.id) { index, tab in
-                let step = SideBar.row + SideBar.gap
+                let step = rowHeight + SideBar.gap
                 rowItem(tab, tabs: browser.tabs, splits: browser.splits,
                         activeID: browser.activeID, interactive: true, pill: pill,
                         close: { browser.close(tab) })
@@ -492,7 +493,7 @@ struct SideBar: View {
                         close: { browser.close(tab) })
                     .padding(.leading, 14)
                     .modifier(Carried(index: index, count: members.count,
-                                      step: SideBar.row + SideBar.gap, vertical: true,
+                                      step: rowHeight + SideBar.gap, vertical: true,
                                       space: "rows", onDropTab: { source, point in drop(source, at: point) },
                                       outside: { browser.dragOut(tab) }, browser: browser, tab: tab) {
                         browser.move(tab, within: group.id, to: $0)
@@ -515,7 +516,7 @@ struct SideBar: View {
     private static let footHeight: CGFloat = 26 + 10
 
     private var newTab: some View {
-        Quiet(icon: "plus", title: "New tab", height: SideBar.row) { browser.newTab() }
+        Quiet(icon: "plus", title: "New tab", height: rowHeight, size: prefs.sideTitle) { browser.newTab() }
             .padding(.top, SideBar.gap)
     }
 
@@ -678,7 +679,7 @@ private struct SideRow: View {
                     .frame(height: 16)
             } else {
                 if prefs.glyph == .icons, !tab.isBlank {
-                    Mark(icon: tab.icon, letter: tab.monogram, size: 15)
+                    Mark(icon: tab.icon, letter: tab.monogram, size: prefs.roomyTabs ? 17 : 15)
                 }
                 if tab.bench {
                     // A script's tab, not yours.
@@ -699,7 +700,7 @@ private struct SideRow: View {
                         .help("Recording")
                 }
                 Text(tab.label)
-                    .font(.system(size: 12.5))
+                    .font(.system(size: prefs.sideTitle))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .foregroundStyle(colour)
@@ -724,7 +725,7 @@ private struct SideRow: View {
         }
         .padding(.leading, 10)
         .padding(.trailing, status ? 7 : 10)
-        .frame(height: 28)
+        .frame(height: prefs.sideRow)
         .frame(maxWidth: .infinity, alignment: .leading)
         // The title keeps its length under the pointer and fades out
         // beneath the cross, rather than being cut shorter, so its end
@@ -757,7 +758,7 @@ private struct SideRow: View {
                 .frame(width: 15, height: 15)
                 .overlay {
                     Color.clear
-                        .frame(width: 30, height: 28)
+                        .frame(width: 30, height: prefs.sideRow)
                         .contentShape(Rectangle())
                         .onTapGesture { if hovering { close() } }
                 }
@@ -821,6 +822,7 @@ struct Quiet: View {
     let icon: String
     let title: String
     var height: CGFloat = 28
+    var size: CGFloat = 12.5
     let act: () -> Void
 
     @State private var hovering = false
@@ -832,7 +834,7 @@ struct Quiet: View {
                     .font(.system(size: 10, weight: .medium))
                     .frame(width: 15)
                 Text(title)
-                    .font(.system(size: 12.5))
+                    .font(.system(size: size))
                 Spacer(minLength: 0)
             }
             .foregroundStyle(hovering ? Palette.ink.opacity(0.7) : Palette.faint)

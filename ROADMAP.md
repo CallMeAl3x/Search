@@ -164,7 +164,6 @@ in it is stale. Whoever works on Search keeps it that way, with `./ideas`
 - [ ] **CleanMyMac flags Search as unwanted** *([#556](https://github.com/driceroland/Search/issues/556))*
 - [ ] **Reading mode follows dark mode** *([#563](https://github.com/driceroland/Search/issues/563), [#564](https://github.com/driceroland/Search/pull/564), [#565](https://github.com/driceroland/Search/pull/565), [#566](https://github.com/driceroland/Search/pull/566))*
 - [ ] **Pages use more memory than in Chrome** *([#569](https://github.com/driceroland/Search/issues/569))*
-- [ ] **Roomier tab rows in the column** *([#570](https://github.com/driceroland/Search/issues/570))*
 
 ## Not on the list, for now
 
